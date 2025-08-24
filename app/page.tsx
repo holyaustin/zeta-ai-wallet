@@ -1,90 +1,69 @@
-use client;
+// app/page.tsx
+'use client';
 
-import { useAccount, useProvider } from wagmi;
-import { useState } from react;
-import { askGemini } from ../lib/gemini;
-import { bridgeEvmToEvm } from ../lib/zeta;
+import { useAccount, useBalance, useNetwork } from 'wagmi';
+import { sepolia, arbitrumSepolia, baseSepolia } from 'wagmi/chains';
+import Link from 'next/link';
 
-export default function Home() {
+const CHAINS = [
+  { id: sepolia.id, name: 'Sepolia', rpc: 'https://ethereum-sepolia-rpc.publicnode.com' },
+  { id: arbitrumSepolia.id, name: 'Arbitrum Sepolia', rpc: 'https://arbitrum-sepolia-rpc.publicnode.com' },
+  { id: baseSepolia.id, name: 'Base Sepolia', rpc: 'https://base-sepolia-rpc.publicnode.com' },
+];
+
+export default function Dashboard() {
   const { address, isConnected } = useAccount();
-  const provider = useProvider();
-  const [question, setQuestion] = useState();
-  const [aiResponse, setAiResponse] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [tx, setTx] = useState<any>(null);
+  const { chain } = useNetwork();
 
-  const handleAsk = async () = {
-    setLoading(true);
-    try {
-      const response = await askGemini(question);
-      setAiResponse(response);
-    } catch (err) {
-      alert("AI parsing failed");
-    }
-    setLoading(false);
-  };
+  // Balances
+  const { data: ethBalance } = useBalance({ address, chainId: sepolia.id });
+  const { data: arbBalance } = useBalance({ address, chainId: arbitrumSepolia.id });
+  const { data: baseBalance } = useBalance({ address, chainId: baseSepolia.id });
 
-  const handleBridge = async () = {
-    if (!provider || !address) return;
-
-    const signer = await provider.getSigner();
-
-    try {
-      const result = await bridgeEvmToEvm(
-        aiResponse.amount,
-        aiResponse.token,
-        signer,
-        address
-      );
-      setTx(result);
-    } catch (err: any) {
-      alert("Error: " + err.message);
-    }
-  };
+  const balances = [
+    { chain: 'Sepolia', symbol: 'ETH', balance: ethBalance?.formatted, logo: '🟢' },
+    { chain: 'Arbitrum Sepolia', symbol: 'ETH', balance: arbBalance?.formatted, logo: '🔵' },
+    { chain: 'Base Sepolia', symbol: 'ETH', balance: baseBalance?.formatted, logo: '⚫' },
+  ];
 
   return (
-    <div className="min-h-screen p-6 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">ZetaAI Bridge</h1>
-      <p className="text-gray-600 mb-8">
-        Ask AI to move tokens between any chain.
-      </p>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-5xl mx-auto">
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">Zeta AI Wallet</h1>
+        <p className="text-gray-600 mb-8">Your universal cross-chain wallet powered by AI.</p>
 
-      {isConnected && <p className="mb-4">Wallet: {address}</p>}
+        {!isConnected ? (
+          <div className="text-center py-12">
+            <p className="text-lg text-gray-500">Connect your wallet to view balances</p>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              {balances.map((b, i) => (
+                <div key={i} className="bg-white p-6 rounded-xl shadow-md">
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="text-2xl">{b.logo}</span>
+                    <div>
+                      <h3 className="font-semibold text-gray-800">{b.chain}</h3>
+                      <p className="text-sm text-gray-500">{b.symbol}</p>
+                    </div>
+                  </div>
+                  <p className="text-xl font-mono">{Number(b.balance).toFixed(6)} {b.symbol}</p>
+                </div>
+              ))}
+            </div>
 
-      <input
-        value={question}
-        onChange={(e) => setQuestion(e.target.value)}
-        placeholder='Move 100 USDC from Ethereum to Arbitrum'
-        className="w-full p-3 border rounded-lg mb-4"
-      />
-      <button
-        onClick={handleAsk}
-        disabled={loading}
-        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-      >
-        {loading ? 'Asking AI...' : 'Ask AI'}
-      </button>
-
-      {aiResponse && (
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <h3 className="font-semibold">AI Response:</h3>
-          <pre className="text-sm mt-2">{JSON.stringify(aiResponse, null, 2)}</pre>
-          <button
-            onClick={handleBridge}
-            className="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg text-sm"
-          >
-            Execute Bridge
-          </button>
-        </div>
-      )}
-
-      {tx && (
-        <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-          <p>✅ Bridge initiated!</p>
-          <p>Deposit: <a href={`https://athens3.zetachain.com/tx/${tx.depositTx.hash}`} target="_blank" className="text-blue-600">{tx.depositTx.hash}</a></p>
-          <p>Withdraw: <a href={`https://arb-sepolia.blockscout.com/tx/${tx.withdrawTx.tx.hash}`} target="_blank" className="text-blue-600">{tx.withdrawTx.tx.hash}</a></p>
-        </div>
-      )}
+            <div className="text-center">
+              <Link
+                href="/ai"
+                className="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition"
+              >
+                Open AI Assistant
+              </Link>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
