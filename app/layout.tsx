@@ -1,12 +1,26 @@
-// app/layout.tsx
-import './globals.css';
-import { Providers } from './providers';
+"use client";
+
+import "./globals.css";
+import { Providers } from "./providers";
+import Header from "./components/Header";
+import Footer from "./components/Footer";
+import "@rainbow-me/rainbowkit/styles.css";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
-        <Providers>{children}</Providers>
+      <head>
+        <title>Zeta AI Wallet</title>
+        <meta name="description" content="AI-powered cross-chain wallet" />
+      </head>
+      <body className="bg-gray-50 min-h-screen flex flex-col">
+        <Providers>
+          <Header />
+          <main className="flex-1 container mx-auto px-4 py-8">
+            {children}
+          </main>
+          <Footer />
+        </Providers>
       </body>
     </html>
   );

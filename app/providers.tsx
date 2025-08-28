@@ -1,112 +1,48 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createConfig, http, WagmiProvider } from "wagmi";
-import {
-  sepolia,
-  arbitrumSepolia,
-  optimismSepolia,
-  baseSepolia,
-} from "wagmi/chains";
+import { WagmiProvider } from "wagmi";
+import { sepolia } from "wagmi/chains";
 import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
-import { WalletKitProvider } from "@mysten/wallet-kit";
+import { 
+  WalletProvider, 
+  SuiClientProvider,
+  createNetworkConfig 
+} from "@mysten/dapp-kit";
 
-/* ---------- Avalanche Fuji ---------- */
-const avalancheFuji = {
-  id: 43113,
-  name: "Avalanche Fuji",
-  network: "avalanche-fuji",
-  nativeCurrency: { name: "Avalanche", symbol: "AVAX", decimals: 18 },
-  rpcUrls: { default: { http: ["https://api.avax-test.network/ext/bc/C/rpc"] } },
-  blockExplorers: {
-    default: {
-      name: "Snowtrace",
-      url: "https://testnet.snowtrace.io",
-    },
-  },
-} as const;
-
-/* ---------- BSC Testnet ---------- */
-const bscTestnet = {
-  id: 97,
-  name: "BSC Testnet",
-  network: "bsc-testnet",
-  nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
-  rpcUrls: {
-    default: {
-      http: ["https://data-seed-prebsc-1-s1.binance.org:8545"],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: "BscScan",
-      url: "https://testnet.bscscan.com",
-    },
-  },
-} as const;
-
-/* ---------- ZetaChain Athens‑3 ---------- */
-const zetaTestnet = {
-  id: 7001,
-  name: "ZetaChain Athens‑3",
-  network: "zeta-testnet",
-  nativeCurrency: { name: "ZETA", symbol: "ZETA", decimals: 18 },
-  rpcUrls: {
-    default: {
-      http: [
-        "https://api.zetachain.com/endpoints/v1/crosschain/testnet",
-      ],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: "ZetaChain Explorer",
-      url: "https://athens3.zetachain.com",
-    },
-  },
-} as const;
-
-/* ---------- Chain list ---------- */
-const chains = [
-  sepolia,
-  arbitrumSepolia,
-  optimismSepolia,
-  baseSepolia,
-  avalancheFuji,
-  bscTestnet,
-  zetaTestnet,
-] as const;
-
-/* ---------- Transport map (typed correctly) ---------- */
-const transports = {
-  [sepolia.id]: http(),
-  [arbitrumSepolia.id]: http(),
-  [optimismSepolia.id]: http(),
-  [baseSepolia.id]: http(),
-  [avalancheFuji.id]: http(),
-  [bscTestnet.id]: http(),
-  [zetaTestnet.id]: http(),
-} as const;
-
-/* ---------- wagmi config ---------- */
-const wagmiConfig = createConfig({
-  chains,
-  transports,
+// Create Wagmi config
+const wagmiConfig = getDefaultConfig({
+  appName: "Zeta AI Wallet",
+  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "default-project-id",
+  chains: [sepolia],
   ssr: true,
 });
-export { wagmiConfig };
 
 const queryClient = new QueryClient();
+
+// For the latest version, use createNetworkConfig
+const { networkConfig } = createNetworkConfig({
+  testnet: { url: "https://fullnode.testnet.sui.io:443" },
+  mainnet: { url: "https://fullnode.mainnet.sui.io:443" },
+});
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>
-          {/* WalletKitProvider supplies Sui wallet support */}
-          <WalletKitProvider>{children}</WalletKitProvider>
+          <SuiClientProvider
+            networks={networkConfig}
+            defaultNetwork="testnet"
+          >
+            <WalletProvider>
+              {children}
+            </WalletProvider>
+          </SuiClientProvider>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
 }
+
+export { wagmiConfig };

@@ -2,17 +2,19 @@
 
 import { useAccount } from "wagmi";
 import { useState } from "react";
-import { evmDeposit, zetachainCall } from "@zetachain/toolkit";
 import { getWalletClient } from "wagmi/actions";
 import { wagmiConfig } from "../providers";
 import { sepolia } from "wagmi/chains";
+import { useCurrentWallet } from "@mysten/dapp-kit";
+import { TransactionBlock } from "@mysten/sui.js/transactions";
 
 export default function AIPage() {
   const { address, isConnected } = useAccount();
+  const { currentWallet } = useCurrentWallet();
   const [question, setQuestion] = useState("");
   const [aiResponse, setAiResponse] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [tx, setTx] = useState<any>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
 
   const askAI = async () => {
     setLoading(true);
@@ -22,11 +24,16 @@ export default function AIPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question }),
       });
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
       const data = await res.json();
       setAiResponse(data);
     } catch (err) {
       console.error("AI error:", err);
-      alert("Failed to reach AI.");
+      alert("Failed to reach AI. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -34,94 +41,125 @@ export default function AIPage() {
 
   const executeBridge = async () => {
     if (!isConnected || !address || !aiResponse) return;
+
     try {
-      // Get a signer (wallet client) from wagmi
+      // For EVM to ZetaChain bridge
       const walletClient = await getWalletClient(wagmiConfig, {
         chainId: sepolia.id,
       });
+      
       if (!walletClient) throw new Error("Wallet client not found");
 
-      // 1️⃣ Deposit to ZetaChain
+      // Dynamically import the real @zetachain/toolkit at runtime
+      const { evmDeposit } = await import("@zetachain/toolkit");
+
+      // Add type checking for aiResponse properties
+      const amount = parseFloat(aiResponse.amount || "0");
+      const token = aiResponse.token === "ETH"
+        ? "0x0000000000000000000000000000000000000000"
+        : aiResponse.tokenAddress || "";
+
+      if (!token) {
+        throw new Error("Token address not found in AI response");
+      }
+
       const depositTx = await evmDeposit(
         {
-          amount: aiResponse.amount,
-          token:
-            aiResponse.token === "ETH"
-              ? "0x0000000000000000000000000000000000000000" // native ETH
-              : "0x...", // USDC address if needed
+          amount,
+          token,
           receiver: address,
         },
         { signer: walletClient }
       );
-      console.log(" deposit");
-      // await zetachainCall(
-      //   {
-      //     receiver: "0xYourUniversalContract",
-      //     function: "onDeposit(address,uint256)",
-      //     types: ["address", "uint256"],
-      //     values: [address, BigInt(aiResponse.amount)],
-      //     zrc20: "0x57B1ef088334374773128d2879B53911f348B99b", // ZRC20 ETH
-      //   },
-      //   { signer: walletClient }
-      // );
 
-      setTx({ depositHash: depositTx.hash });
+      console.log("Deposit hash:", depositTx.hash);
+      setTxHash(depositTx.hash);
+
+      // For Sui transactions (if needed)
+      if (currentWallet) {
+        const tx = new TransactionBlock();
+        tx.setSender(currentWallet.accounts[0].address);
+        // Add your Sui transaction logic here
+      }
     } catch (err: any) {
-      alert("Error: " + err.message);
+      console.error("Bridge execution error:", err);
+      alert("Error: " + (err.message || "Unknown error occurred"));
     }
   };
 
   if (!isConnected) {
-    return <div className="p-6">Connect wallet first.</div>;
+    return (
+      <div className="p-6 text-center">
+        <h2 className="text-xl font-semibold mb-4">Connect your wallet first</h2>
+        <p className="text-gray-600">Please connect your wallet to use the AI assistant.</p>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Zeta AI Assistant</h1>
-        <p className="text-gray-600 mb-6">
-          Ask me to move tokens between chains.
+        <p className="text-gray-600 mb-4">
+          Ask me to move tokens between chains (e.g., Move 0.1 ETH from Ethereum to Arbitrum).
         </p>
 
-        <input
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Move 0.5 ETH from Ethereum to ZetaChain"
-          className="w-full p-3 border rounded-lg mb-4"
-        />
-        <button
-          onClick={askAI}
-          disabled={loading}
-          className="bg-blue-600 text-white px-6 py-2 rounded-lg disabled:opacity-50"
-        >
-          {loading ? "Asking AI…" : "Ask AI"}
-        </button>
+        <div className="mb-6">
+          <input
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="Your request…"
+            className="w-full p-3 border rounded-lg mb-4"
+            onKeyPress={(e) => {
+              if (e.key === 'Enter' && !loading) {
+                askAI();
+              }
+            }}
+          />
+
+          <button
+            onClick={askAI}
+            disabled={loading || !question.trim()}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg disabled:opacity-50"
+          >
+            {loading ? "Thinking…" : "Ask AI"}
+          </button>
+        </div>
 
         {aiResponse && (
           <div className="mt-6 p-4 bg-gray-100 rounded-lg">
-            <h3 className="font-semibold">AI Response:</h3>
-            <pre className="text-sm mt-2">{JSON.stringify(aiResponse, null, 2)}</pre>
+            <h3 className="font-semibold mb-2">AI Response</h3>
+            <div className="bg-white p-4 rounded-md mb-4">
+              <pre className="text-sm whitespace-pre-wrap">
+                {JSON.stringify(aiResponse, null, 2)}
+              </pre>
+            </div>
             <button
               onClick={executeBridge}
-              className="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg"
+              className="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
             >
               Execute Bridge
             </button>
           </div>
         )}
 
-        {tx && (
-          <div className="mt-6 p-4 bg-green-50 rounded-lg">
-            <p>✅ Deposit initiated on ZetaChain!</p>
-            <p>
-              Tx:{" "}
+        {txHash && (
+          <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+            <div className="flex items-center mb-2">
+              <svg className="w-5 h-5 mr-2 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span className="font-semibold">Deposit initiated on ZetaChain!</span>
+            </div>
+            <p className="text-sm">
+              Transaction:{" "}
               <a
-                href={`https://athens3.zetachain.com/tx/${tx.depositHash}`}
+                href={`https://explorer.zetachain.com/address/${txHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600"
+                className="text-blue-600 hover:underline break-all"
               >
-                {tx.depositHash}
+                {txHash}
               </a>
             </p>
           </div>
