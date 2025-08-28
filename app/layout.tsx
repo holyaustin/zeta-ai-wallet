@@ -13,10 +13,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <title>Zeta AI Wallet</title>
         <meta name="description" content="AI-powered cross-chain wallet" />
       </head>
-      <body className="bg-gray-50 min-h-screen flex flex-col">
+      <body className="bg-gray-50 flex flex-col">
         <Providers>
           <Header />
-          <main className="flex-1 container mx-auto px-4 py-8">
+          <main className="flex-1 container mx-auto">
             {children}
           </main>
           <Footer />

@@ -5,12 +5,9 @@ import { useState } from "react";
 import { getWalletClient } from "wagmi/actions";
 import { wagmiConfig } from "../providers";
 import { sepolia } from "wagmi/chains";
-import { useCurrentWallet } from "@mysten/dapp-kit";
-import { TransactionBlock } from "@mysten/sui.js/transactions";
 
 export default function AIPage() {
   const { address, isConnected } = useAccount();
-  const { currentWallet } = useCurrentWallet();
   const [question, setQuestion] = useState("");
   const [aiResponse, setAiResponse] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -74,13 +71,6 @@ export default function AIPage() {
 
       console.log("Deposit hash:", depositTx.hash);
       setTxHash(depositTx.hash);
-
-      // For Sui transactions (if needed)
-      if (currentWallet) {
-        const tx = new TransactionBlock();
-        tx.setSender(currentWallet.accounts[0].address);
-        // Add your Sui transaction logic here
-      }
     } catch (err: any) {
       console.error("Bridge execution error:", err);
       alert("Error: " + (err.message || "Unknown error occurred"));

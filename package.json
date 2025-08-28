@@ -9,11 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@mysten/dapp-kit": "^0.17.5",
     "@mysten/slush-wallet": "^0.1.22",
-    "@mysten/sui.js": "^0.54.1",
     "@mysten/wallet-kit": "^0.8.6",
-    "@mysten/wallet-standard": "^0.16.12",
     "@rainbow-me/rainbowkit": "^2.2.8",
     "@solana/wallet-adapter-react": "^0.15.39",
     "@solana/wallet-adapter-react-ui": "^0.9.39",
