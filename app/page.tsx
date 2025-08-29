@@ -135,11 +135,12 @@ export default function Dashboard() {
         </div>
 
         {/* Balance Grid */}
+        {isConnected && (
+          
+          <div className="flex-1 px-4 pb-12">
           <p className="text-center text-lg md:text-xl text-gray-200 mb-4 font-bold">
             Multi-Chain Wallet Balance
           </p>
-        {isConnected && (
-          <div className="flex-1 px-4 pb-12">
             <div className="max-w-7xl mx-auto">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {balances.map((b, i) => (
