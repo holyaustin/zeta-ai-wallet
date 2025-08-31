@@ -2,7 +2,8 @@
 "use client";
 
 import { useAccount, useBalance } from "wagmi";
-import { RainbowKitCustomConnectButton } from "@/components/RainbowKitCustomConnectButton";
+import { WalletButton } from "../components/WalletButton";
+// import { RainbowKitCustomConnectButton } from "@/components/RainbowKitCustomConnectButton";
 import { useState } from "react";
 
 type AISuggestion = {
@@ -50,7 +51,9 @@ export default function WalletPage() {
         <h1 className="text-4xl font-bold mb-8 text-center">Your Wallet</h1>
 
         <div className="max-w-md mx-auto bg-zinc-900 p-8 rounded-2xl border border-zinc-800">
-          <RainbowKitCustomConnectButton />
+            <div className="flex justify-center mb-10">
+              <WalletButton />
+            </div>
 
           {isConnected && (
             <div className="mt-6 space-y-4">

@@ -117,7 +117,9 @@ export default function LendPage() {
         <h1 className="text-4xl font-bold mb-8 text-center">OmniLend – Cross-Chain Lending</h1>
 
         <div className="max-w-md mx-auto bg-zinc-900 p-8 rounded-2xl border border-zinc-800">
-          <WalletButton/>
+            <div className="flex justify-center mb-10">
+              <WalletButton />
+            </div>
 
           {isConnected && (
             <div className="mt-6 space-y-4">
