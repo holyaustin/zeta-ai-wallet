@@ -1,22 +1,28 @@
+// scripts/deploy.js
 const hre = require("hardhat");
 
 async function main() {
-  const ZETA_CONNECTOR = "0x5F3b5DfEb7B28CDbD7FAba78963EE202a494e2A2"; // ZetaChain Testnet
+  console.log("Deploying OmniLend to ZetaChain Testnet...");
 
   const OmniLend = await hre.ethers.getContractFactory("OmniLend");
-  const omniLend = await OmniLend.deploy(ZETA_CONNECTOR);
+  const omniLend = await OmniLend.deploy();
 
   await omniLend.waitForDeployment();
-  console.log("OmniLend deployed to:", await omniLend.getAddress());
+  const address = await omniLend.getAddress();
 
-  // Verify on Etherscan
+  console.log("✅ OmniLend deployed to:", address);
+
+  // Verify on ZetaScan
   await hre.run("verify:verify", {
-    address: await omniLend.getAddress(),
-    constructorArguments: [ZETA_CONNECTOR],
+    address,
+    constructorArguments: [],
+    contract: "contracts/OmniLend.sol:OmniLend",
   });
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error("Error deploying contract:", error);
+    process.exit(1);
+  });

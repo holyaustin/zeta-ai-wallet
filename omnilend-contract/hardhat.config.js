@@ -13,11 +13,15 @@ module.exports = {
   },
 
   networks: {
+    hardhat: {
+      chainId: 7000,
+      allowUnlimitedContractSize: true,
+    },
     // ZetaChain Testnet (Athens)
     zetaTestnet: {
       url: "https://zetachain-athens-evm.blockpi.network/v1/rpc/public",
       accounts: [process.env.PRIVATE_KEY],
-      chainId: 7000,
+      chainId: 7001,
     },
 
     // Optimism Sepolia
@@ -52,7 +56,7 @@ module.exports = {
     customChains: [
       {
         network: "zetaTestnet",
-        chainId: 7000,
+        chainId: 7001,
         urls: {
           apiURL: "https://api.zetachain.com/api",
           browserURL: "https://zetachain.com/explorer",

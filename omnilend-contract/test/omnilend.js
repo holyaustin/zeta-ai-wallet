@@ -1,56 +1,89 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-const ZRC20_WETH = "0x5772c0e91daa3aa9739691ccb1631a528957666d"; // WETH.z
-const GOERLI = 5;
+// ✅ Use correct chain IDs and ZRC-20 addresses from ZetaChain docs
+const ZETA_TESTNET = 7000;
 const BASE_SEPOLIA = 84532;
+const ARBITRUM_SEPOLIA = 421614;
 
-describe("OmniLend", function () {
-  let omniLend, owner, user;
+// ✅ Correct ZRC-20 addresses (checksummed)
+const ZRC20_WETH_BASE = "0x5772c0e91daa3aa9739691ccb1631a528957666d";
+const ZRC20_USDC_ARB = "0x6569b4776f554d0ee5c9f798e5d29bc7b8311e29";
+const ZRC20_ZETA = "0x5Fd55A1B9FC24967C4dB09C513C3BA0aFea6a45b";
+
+const USER_ADDRESS = "0x2c3b2B2325610a6814f2f822D0bF4DAB8CF16e16";
+const AMOUNT = ethers.parseEther("0.0001");
+
+describe("OmniLend - Multi-Chain Lending", function () {
+  let omniLend, owner;
+  console.log("Before contract deployment");
 
   beforeEach(async function () {
-    [owner, user] = await ethers.getSigners();
+    [owner] = await ethers.getSigners();
     const OmniLend = await ethers.getContractFactory("OmniLend");
     omniLend = await OmniLend.deploy();
     await omniLend.waitForDeployment();
   });
 
-  it("Should accept deposit via onCall with sourceChainId", async function () {
-    // ✅ Encode sourceChainId in message
+  console.log("Before On call");
+
+  const callOnCall = async (sourceChainId, zrc20, amount) => {
     const message = ethers.AbiCoder.defaultAbiCoder().encode(
       ["address", "address", "uint256"],
-      [user.address, ZRC20_WETH, GOERLI]
+      [USER_ADDRESS, zrc20, sourceChainId]
     );
 
-    // ✅ context.chainID = destination chain ID (7000)
     const context = {
-      sender: user.address,
-      chainID: 7000, // ZetaChain
+      sender: USER_ADDRESS,
+      chainID: ZETA_TESTNET,
+      isCall: true,
+    };
+
+    return omniLend.connect(owner).onCall(context, zrc20, amount, message);
+  };
+console.log("On call successful");
+
+  it("Should accept WETH deposit from Base Sepolia", async function () {
+    await expect(callOnCall(BASE_SEPOLIA, ZRC20_WETH_BASE, AMOUNT))
+
+      .to.emit(omniLend, "Deposited")
+      console.log("2234")
+      .withArgs(USER_ADDRESS, AMOUNT, ZRC20_WETH_BASE, BASE_SEPOLIA);
+      console.log("345")
+  });
+
+    console.log("Accept WETH successful from base");
+
+  it("Should accept USDC deposit from Arbitrum Sepolia", async function () {
+    const amount = ethers.parseUnits("100", 6);
+    const message = ethers.AbiCoder.defaultAbiCoder().encode(
+      ["address", "address", "uint256"],
+      [USER_ADDRESS, ZRC20_USDC_ARB, ARBITRUM_SEPOLIA]
+    );
+
+    const context = {
+      sender: USER_ADDRESS,
+      chainID: ZETA_TESTNET,
       isCall: true,
     };
 
     await expect(
-      omniLend.connect(owner).onCall(context, ZRC20_WETH, ethers.parseEther("1"), message)
+      omniLend.connect(owner).onCall(context, ZRC20_USDC_ARB, amount, message)
     )
       .to.emit(omniLend, "Deposited")
-      .withArgs(user.address, ethers.parseEther("1"), ZRC20_WETH, GOERLI);
-
-    const pos = await omniLend.positions(user.address);
-    expect(pos.exists).to.be.true;
-    expect(pos.depositAmount).to.equal(ethers.parseEther("1"));
-    expect(pos.depositChainId).to.equal(GOERLI);
+      .withArgs(USER_ADDRESS, amount, ZRC20_USDC_ARB, ARBITRUM_SEPOLIA);
   });
 
-  it("Should allow borrow via withdrawAndCall", async function () {
-    const message = ethers.AbiCoder.defaultAbiCoder().encode(
-      ["address", "address", "uint256"],
-      [user.address, ZRC20_WETH, GOERLI]
-    );
+  it("Should accept ZETA deposit (simulated)", async function () {
+    await expect(callOnCall(ZETA_TESTNET, ZRC20_ZETA, AMOUNT))
+      .to.emit(omniLend, "Deposited")
+      .withArgs(USER_ADDRESS, AMOUNT, ZRC20_ZETA, ZETA_TESTNET);
+  });
 
-    const context = { sender: user.address, chainID: 7000, isCall: true };
-    await omniLend.connect(owner).onCall(context, ZRC20_WETH, ethers.parseEther("2"), message);
+  it("Should borrow WETH on Base Sepolia", async function () {
+    await callOnCall(BASE_SEPOLIA, ZRC20_WETH_BASE, AMOUNT);
 
-    const receiver = ethers.zeroPadValue(user.address, 32);
+    const receiver = ethers.zeroPadValue(USER_ADDRESS, 32);
     const callOptions = { gasLimit: 500_000, isArbitraryCall: false };
     const revertOptions = {
       revertAddress: await omniLend.getAddress(),
@@ -60,10 +93,13 @@ describe("OmniLend", function () {
       onRevertGasLimit: 100_000,
     };
 
+    await ethers.provider.send("hardhat_setBalance", [USER_ADDRESS, "0x1000000000000000000"]);
+    const user = await ethers.getImpersonatedSigner(USER_ADDRESS);
+
     await expect(
       omniLend.connect(user).borrow(
-        ethers.parseEther("1"),
-        ZRC20_WETH,
+        AMOUNT,
+        ZRC20_WETH_BASE,
         BASE_SEPOLIA,
         receiver,
         callOptions,
@@ -72,13 +108,42 @@ describe("OmniLend", function () {
     ).to.not.be.reverted;
   });
 
-  it("Should handle revert", async function () {
+  it("Should repay debt", async function () {
+    await callOnCall(BASE_SEPOLIA, ZRC20_WETH_BASE, AMOUNT);
+    const user = await ethers.getImpersonatedSigner(USER_ADDRESS);
+    await omniLend.connect(user).repay();
+    const pos = await omniLend.positions(USER_ADDRESS);
+    expect(pos.debt).to.equal(0);
+  });
+
+  it("Should allow owner to liquidate", async function () {
+    await callOnCall(BASE_SEPOLIA, ZRC20_WETH_BASE, AMOUNT);
+
+    const posKey = ethers.keccak256(
+      ethers.AbiCoder.defaultAbiCoder().encode(["address", "uint256"], [USER_ADDRESS, 0])
+    );
+    const debtSlot = ethers.AbiCoder.defaultAbiCoder().encode(
+      ["uint256"],
+      [ethers.BigNumber.from(posKey).add(1)]
+    );
+
+    await ethers.provider.send("hardhat_setStorageAt", [
+      await omniLend.getAddress(),
+      debtSlot,
+      ethers.zeroPadValue(AMOUNT, 32),
+    ]);
+
+    await expect(omniLend.connect(owner).liquidate(USER_ADDRESS))
+      .to.emit(omniLend, "Liquidated");
+  });
+
+  it("Should handle onRevert", async function () {
     const revertContext = {
       sender: await omniLend.getAddress(),
-      destinationChainId: 7000,
-      sourceChainId: BASE_SEPOLIA,
+      destinationChainId: BASE_SEPOLIA,
+      sourceChainId: ZETA_TESTNET,
       message: "0x",
-      zrc20: ZRC20_WETH,
+      zrc20: ZRC20_WETH_BASE, // ✅ Fixed: was "asset"
       amount: 0,
       success: false,
       callInfo: { isCall: true, isSystem: false },

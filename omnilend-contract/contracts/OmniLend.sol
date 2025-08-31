@@ -1,35 +1,39 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-// ✅ Only one ZetaChain import
+// ✅ Only one import — brings in UniversalContract, GatewayZEVM, IZRC20, RevertContext, etc.
 import "@zetachain/protocol-contracts/contracts/zevm/GatewayZEVM.sol";
 
-// ✅ Import IERC20 for token transfers
+// ✅ For emergency token withdrawal
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title OmniLend
  * @dev Cross-chain lending protocol on ZetaChain.
- * Supports native & ERC-20 deposits, borrow via withdrawAndCall.
+ * Users deposit on any chain → borrow on any chain.
+ * Uses ZetaChain's Universal Contract pattern with Gateway.
  */
 contract OmniLend is UniversalContract {
-    // ✅ Correct checksummed Gateway address
+    // 🚀 ZetaChain Testnet (Athens) Gateway
     GatewayZEVM public immutable gateway =
-        GatewayZEVM(payable(0x6c533f7fE93fAE114d0954697069Df33C9B74fD7));
+        GatewayZEVM(payable(0x6c533f7fE93fAE114d0954697069Df33C9B74fD7)); 
 
+    // Protocol owner (for emergency functions)
     address public owner;
 
-    // 50% LTV
+    // 50% Loan-to-Value (LTV) in basis points
     uint256 public constant LTV_BPS = 5000;
 
+    // User loan position
     struct Position {
-        address asset;           // ZRC-20 token
+        address asset;           // ZRC-20 token (bridged asset)
         uint256 depositAmount;
         uint256 debt;
-        uint256 depositChainId;  // must be passed in message
+        uint256 depositChainId;  // source chain ID (e.g., 5 = Goerli)
         bool exists;
     }
 
+    // Mapping: user → loan position
     mapping(address => Position) public positions;
 
     // Events
@@ -39,7 +43,7 @@ contract OmniLend is UniversalContract {
     event Liquidated(address indexed user);
     event RevertEvent(string message, RevertContext revertContext);
 
-    // Errors
+    // Custom Errors
     error Unauthorized();
     error InvalidAsset();
     error OverLTV();
@@ -61,9 +65,7 @@ contract OmniLend is UniversalContract {
 
     /**
      * @dev Entry point: called when user deposits + calls from connected chain
-     * @param context.sender = sender on source chain
-     * @param context.chainID = destination chain ID (always 7000 on ZetaChain)
-     * @param message = (sender, asset, sourceChainId) — we decode source chain here
+     * Triggered by Gateway when a cross-chain message arrives
      */
     function onCall(
         MessageContext calldata context,
@@ -71,40 +73,44 @@ contract OmniLend is UniversalContract {
         uint256 amount,
         bytes calldata message
     ) external override onlyGateway {
-        // ✅ Decode: user, asset, and sourceChainId from message
-        (address sender, address asset, uint256 sourceChainId) = abi.decode(
-            message,
-            (address, address, uint256)
-        );
+        // Decode sender and source chain ID from message
+        (address sender, uint256 sourceChainId) = abi.decode(message, (address, uint256));
 
+        // Validate zrc20 (ZetaChain's representation of bridged asset)
         if (zrc20 == address(0)) revert InvalidAsset();
 
-        Position storage pos = positions[sender];
-
-        if (!pos.exists) {
-            pos.asset = zrc20;
-            pos.depositAmount = amount;
-            pos.debt = 0;
-            pos.depositChainId = sourceChainId; // ✅ Store source chain ID from message
-            pos.exists = true;
+        // Create or update position
+        if (!positions[sender].exists) {
+            positions[sender] = Position({
+                asset: zrc20,
+                depositAmount: amount,
+                debt: 0,
+                depositChainId: sourceChainId,
+                exists: true
+            });
         } else {
-            pos.depositAmount += amount;
+            positions[sender].depositAmount += amount;
         }
 
-        // ✅ Emit with sourceChainId (from message), not context.chainID
         emit Deposited(sender, amount, zrc20, sourceChainId);
     }
 
     /**
-     * @dev Borrow: send ZRC-20 as native/ERC-20 to user on any chain
+     * @dev Borrow asset on any chain
+     * @param amount Amount to borrow
+     * @param zrc20Asset ZRC-20 token to receive (e.g., USDC.z)
+     * @param destChainId Destination chain (e.g., 84532 = Base Sepolia)
+     * @param receiver Receiver address on destination chain (bytes32 padded)
+     * @param gasLimit Gas limit for execution on destination
+     * @param isArbitraryCall Whether to call an arbitrary function
      */
     function borrow(
         uint256 amount,
         address zrc20Asset,
         uint256 destChainId,
         bytes memory receiver,
-        CallOptions calldata callOptions,
-        RevertOptions calldata revertOptions
+        uint256 gasLimit,
+        bool isArbitraryCall
     ) external {
         Position storage pos = positions[msg.sender];
         require(pos.exists, "OmniLend: no deposit");
@@ -117,21 +123,26 @@ contract OmniLend is UniversalContract {
         // Approve Gateway to spend ZRC-20
         IZRC20(zrc20Asset).approve(address(gateway), amount);
 
-        // Withdraw native asset on destination chain
-        gateway.withdrawAndCall(
+        // Send via Gateway
+        gateway.call(
             receiver,
-            amount,
             zrc20Asset,
             "", // no calldata
-            callOptions,
-            revertOptions
+            CallOptions(gasLimit, isArbitraryCall),
+            RevertOptions(
+                payable(msg.sender),
+                true,
+                payable(address(this)),
+                "",
+                100_000
+            )
         );
 
         emit Borrowed(msg.sender, amount, zrc20Asset, destChainId);
     }
 
     /**
-     * @dev Repay debt
+     * @dev Repay loan
      */
     function repay() external {
         require(positions[msg.sender].exists, "OmniLend: no position");
@@ -140,35 +151,36 @@ contract OmniLend is UniversalContract {
     }
 
     /**
-     * @dev Liquidate undercollateralized loan
+     * @dev Liquidate undercollateralized position (owner-only)
      */
     function liquidate(address borrower) external onlyOwner {
         Position storage pos = positions[borrower];
         require(pos.exists, "OmniLend: no position");
 
         uint256 maxBorrow = (pos.depositAmount * LTV_BPS) / 10000;
-        require(pos.debt > maxBorrow, "OmniLend: healthy");
+        require(pos.debt > maxBorrow, "OmniLend: healthy position");
 
         delete positions[borrower];
         emit Liquidated(borrower);
     }
 
     /**
-     * @dev Handle failed outgoing call
+     * @dev Handle revert from failed outgoing call
      */
     function onRevert(RevertContext calldata revertContext) external onlyGateway {
         emit RevertEvent("OmniLend: Revert received", revertContext);
+        // In practice: refund, alert, retry
     }
 
     /**
-     * @dev Emergency: withdraw stuck tokens
+     * @dev Emergency: withdraw stuck ERC-20 tokens
      */
     function withdrawToken(address token, address to, uint256 amount) external onlyOwner {
         IERC20(token).transfer(to, amount);
     }
 
     /**
-     * @dev Allow receiving ZETA
+     * @dev Allow receiving native ZETA
      */
     receive() external payable {}
 }
