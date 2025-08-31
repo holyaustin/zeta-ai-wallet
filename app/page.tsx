@@ -93,9 +93,10 @@ console.log("Balances in AVAX:", avaxBalance);
         {/* Header Section */}
         <div className="text-center pt-8 pb-4 px-4">
           <h1 className="text-4xl md:text-5xl font-bold mb-2">Zeta AI Wallet</h1>
-          <p className="text-lg md:text-xl text-gray-200 mb-4">
-            Universal access to Blockchains — powered by Zetachain + Google AI.
-          </p>
+        <p className="text-xl md:text-2xl text-zinc-300 mb-10 max-w-3xl mx-auto">
+          The smart, cross-chain wallet powered by ZetaChain and decentralized AI. 
+          Interact with any Dapp on any chain — safely, intelligently, seamlessly.
+        </p>
 
           {/* Wallet Button (Centered when not connected) */}
           {!isConnected && (
@@ -113,16 +114,18 @@ console.log("Balances in AVAX:", avaxBalance);
               >
                 💬 Chat with AI Assistant
               </Link>
-              <button
+              <Link
+              href="/wallet"
                 className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-4 rounded-xl font-semibold shadow-lg transition transform hover:scale-105 text-base md:text-lg"
               >
                 🔄 Cross-Chain Swap
-              </button>
-              <button
+              </Link>
+              <Link
+               href="/lend"
                 className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white px-6 py-4 rounded-xl font-semibold shadow-lg transition transform hover:scale-105 text-base md:text-lg"
               >
-                💰 Cross-Chain Lend
-              </button>
+                💰 Use OmniLend
+              </Link>
             </div>
           )}
 
@@ -177,6 +180,20 @@ console.log("Balances in AVAX:", avaxBalance);
             </div>
           </div>
         )}
+        <div className="mt-5 mb-5 grid md:grid-cols-3 gap-8 text-left max-w-5xl mx-auto">
+          <div className="p-6 bg-black/30 rounded-xl backdrop-blur-sm">
+            <h3 className="text-xl font-bold text-purple-400 mb-2">🌍 Universal Access</h3>
+            <p className="text-zinc-300">Interact with Ethereum, Base, Arbitrum, and more — all from one wallet.</p>
+          </div>
+          <div className="p-6 bg-black/30 rounded-xl backdrop-blur-sm">
+            <h3 className="text-xl font-bold text-purple-400 mb-2">🤖 AI-Powered</h3>
+            <p className="text-zinc-300">Get smart insights using Akash Network — no centralized AI.</p>
+          </div>
+          <div className="p-6 bg-black/30 rounded-xl backdrop-blur-sm">
+            <h3 className="text-xl font-bold text-purple-400 mb-2">🔐 Secure & Non-Custodial</h3>
+            <p className="text-zinc-300">Your keys, your assets. We never store your data.</p>
+          </div>
+        </div>
       </div>
     </div>
   );
