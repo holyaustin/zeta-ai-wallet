@@ -56,6 +56,9 @@ export default function Dashboard() {
       parseFloat(bscBalance?.formatted || "0") * USD_PRICES.BNB,
       parseFloat(zetaBalance?.formatted || "0") * USD_PRICES.ZETA,
     ];
+console.log("Balances in Zeta:", zetaBalance);
+console.log("Balances in BNB:", bscBalance);
+console.log("Balances in AVAX:", avaxBalance);
 
     const total = balancesInUsd.reduce((sum, val) => sum + val, 0);
     setTotalValue(total);

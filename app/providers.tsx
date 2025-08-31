@@ -19,7 +19,7 @@ const bscTestnet = {
   id: 97,
   name: "BSC Testnet",
   nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
-  rpcUrls: { default: { http: ["https://data-seed-prebsc-1-s1.binance.org:8545"] } },
+  rpcUrls: { default: { http: ["https://data-seed-prebsc-1-s3.bnbchain.org:8545"] } },
   blockExplorers: { default: { name: "BscScan", url: "https://testnet.bscscan.com" } },
 } as const;
 
@@ -27,7 +27,7 @@ const zetaTestnet = {
   id: 7001,
   name: "ZetaChain Athens-3",
   nativeCurrency: { name: "ZETA", symbol: "ZETA", decimals: 18 },
-  rpcUrls: { default: { http: ["https://api.zetachain.com/endpoints/v1/crosschain/testnet"] } },
+  rpcUrls: { default: { http: ["https://zetachain-athens-evm.blockpi.network/v1/rpc/public"] } },
   blockExplorers: { default: { name: "ZetaChain Explorer", url: "https://athens3.zetachain.com" } },
 } as const;
 
