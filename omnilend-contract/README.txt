@@ -11,3 +11,6 @@ REPORT_GAS=true npx hardhat test
 npx hardhat node
 npx hardhat ignition deploy ./ignition/modules/Lock.js
 ```
+
+Deploying OmniLend to ZetaChain Testnet...
+✅ OmniLend deployed to: 0x589C1494089889C077d7AbBA17B40575E961cC8c
