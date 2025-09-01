@@ -38,6 +38,13 @@ module.exports = {
       chainId: 84532,
     },
 
+    // 🔹 Base Mainnet
+    baseMainnet: {
+      url: "https://mainnet.base.org",
+      accounts: [process.env.PRIVATE_KEY],
+      chainId: 8453,
+    },
+
     // Arbitrum Sepolia
     arbitrumSepolia: {
       url: "https://sepolia-rollup.arbitrum.io/rpc",
@@ -51,6 +58,7 @@ module.exports = {
       zetaTestnet: process.env.ZETASCAN_API_KEY || "",
       optimisticSepolia: process.env.OPTIMISM_API_KEY || "",
       baseSepolia: process.env.BASE_API_KEY || "",
+      baseMainnet: process.env.BASE_API_KEY || "",
       arbitrumSepolia: process.env.ARBISCAN_API_KEY || "",
     },
     customChains: [
@@ -76,6 +84,14 @@ module.exports = {
         urls: {
           apiURL: "https://api-sepolia.basescan.org/api",
           browserURL: "https://sepolia.basescan.org",
+        },
+      },
+            {
+        network: "baseMainnet",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org",
         },
       },
       {
