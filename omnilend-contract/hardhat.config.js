@@ -1,5 +1,8 @@
 require("@nomicfoundation/hardhat-toolbox");
+require("@nomicfoundation/hardhat-verify"); 
 require("dotenv").config();
+
+// console.log("Base AP key = ", process.env.BASE_API_KEY)
 
 module.exports = {
   solidity: {
@@ -23,7 +26,17 @@ module.exports = {
       accounts: [process.env.PRIVATE_KEY],
       chainId: 7001,
     },
-
+    // Etherlink Mainnet
+    etherlink: {
+      url: "https://rpc.ankr.com/etherlink_mainnet",
+      accounts: [process.env.PRIVATE_KEY || ""],
+      chainId: 42793,
+      timeout: 100000, // 100 seconds
+      httpHeaders: { "User-Agent": "Hardhat/1.0" },
+      // Add retry logic
+      gasPrice: "auto",
+      gasMultiplier: 1.2,
+    },
     // Optimism Sepolia
     optimismSepolia: {
       url: "https://sepolia.optimism.io",
@@ -53,15 +66,30 @@ module.exports = {
     },
   },
 
+  verify: {
+    blockscout: {
+      enabled: false,
+    },
+  },
+
   etherscan: {
     apiKey: {
-      zetaTestnet: process.env.ZETASCAN_API_KEY || "",
-      optimisticSepolia: process.env.OPTIMISM_API_KEY || "",
-      baseSepolia: process.env.BASE_API_KEY || "",
-      baseMainnet: process.env.BASE_API_KEY || "",
-      arbitrumSepolia: process.env.ARBISCAN_API_KEY || "",
+      zetaTestnet: process.env.ETHERSCAN_API_KEY,
+      optimisticSepolia: process.env.ETHERSCAN_API_KEY,
+      baseSepolia: process.env.ETHERSCAN_API_KEY,
+      baseMainnet: process.env.ETHERSCAN_API_KEY,
+      arbitrumSepolia: process.env.ETHERSCAN_API_KEY,
+      etherlink: process.env.ETHERSCAN_API_KEY,
     },
     customChains: [
+            {
+        network: "etherlink",
+        chainId: 42793,
+        urls: {
+          apiURL: "https://explorer.etherlink.com/api",
+          browserURL: "https://explorer.etherlink.com",
+        },
+      },
       {
         network: "zetaTestnet",
         chainId: 7001,
@@ -104,4 +132,9 @@ module.exports = {
       },
     ],
   },
+    sourcify: {
+    // Disabled by default
+    // Doesn't need an API key
+    enabled: true
+  }
 };

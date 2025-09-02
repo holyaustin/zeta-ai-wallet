@@ -1,20 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import "@zetachain/protocol-contracts/contracts/evm/external/ERC20Gateway.sol";
+// ✅ Correct import — IGatewayEVM is the unified gateway interface
+import "@zetachain/protocol-contracts/contracts/evm/interfaces/IGatewayEVM.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title ConnectedContract
  * @dev Deploys on Base (Sepolia/Mainnet) to call OmniLend on ZetaChain via depositAndCall
  */
 contract ConnectedContract {
-    IERC20Gateway public immutable gateway;
+    IGatewayEVM public immutable gateway;
     address public immutable omniLend;
 
     event DepositAndCallTriggered(address indexed sender, uint256 amount);
 
     constructor(address gateway_, address omniLend_) {
-        gateway = IERC20Gateway(gateway_);
+        gateway = IGatewayEVM(gateway_);
         omniLend = omniLend_;
     }
 
@@ -31,9 +33,9 @@ contract ConnectedContract {
             omniLend,
             message,
             RevertOptions({
-                revertAddress: address(this),
+                revertAddress: payable(address(this)),
                 callOnRevert: false,
-                abortAddress: address(0),
+                abortAddress: payable(address(0)),
                 revertMessage: "",
                 onRevertGasLimit: 0
             })
@@ -51,7 +53,6 @@ contract ConnectedContract {
     ) external {
         require(amount > 0, "No tokens sent");
 
-        // Transfer and approve
         IERC20(token).transferFrom(msg.sender, address(this), amount);
         IERC20(token).approve(address(gateway), amount);
 
@@ -63,9 +64,9 @@ contract ConnectedContract {
             token,
             message,
             RevertOptions({
-                revertAddress: address(this),
+                revertAddress: payable(address(this)),
                 callOnRevert: false,
-                abortAddress: address(0),
+                abortAddress: payable(address(0)),
                 revertMessage: "",
                 onRevertGasLimit: 0
             })

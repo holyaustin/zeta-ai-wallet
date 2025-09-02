@@ -12,7 +12,7 @@ async function main() {
 
   console.log("✅ OmniLend deployed to:", address);
 
-  // Verify on ZetaScan
+  // Verify on baseScan
   await hre.run("verify:verify", {
     address,
     constructorArguments: [],
