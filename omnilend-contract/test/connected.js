@@ -1,8 +1,8 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-const OMNI_LEND = "0x589C1494089889C077d7AbBA17B40575E961cC8c";
-const GATEWAY = "0x0c487a766110c85d301d96e33579c5b317fa4995";
+const OMNI_LEND = "0x08f3fe12B7c79D9e618BD41212b1246d7141B47B";
+const GATEWAY = "0xe57bc19a7236771c879033036515312b9353797b"; //base mainnet
 
 describe("ConnectedContract", function () {
   let connected, owner;
@@ -20,7 +20,7 @@ describe("ConnectedContract", function () {
   });
 
   it("Should allow depositEthAndCall", async function () {
-    const amount = ethers.parseEther("0.0001");
+    const amount = ethers.parseEther("0.000000000000001");
     await expect(connected.depositEthAndCall({ value: amount }))
       .to.emit(connected, "DepositAndCallTriggered")
       .withArgs(owner.address, amount);

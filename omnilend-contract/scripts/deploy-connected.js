@@ -1,7 +1,7 @@
 const hre = require("hardhat");
 
 // 🔧 Replace with your OmniLend address on ZetaChain
-const OMNI_LEND_ADDRESS = "0x589C1494089889C077d7AbBA17B40575E961cC8c";
+const OMNI_LEND_ADDRESS = "0x08f3fe12B7c79D9e618BD41212b1246d7141B47B";
 
 // ✅ Gateway addresses
 const GATEWAY_BASE_SEPOLIA = "0x0c487a766110c85d301d96e33579c5b317fa4995";
@@ -13,7 +13,7 @@ async function main() {
   let gatewayAddress;
   if (networkName === "baseSepolia") {
     gatewayAddress = GATEWAY_BASE_SEPOLIA;
-  } else if (networkName === "baseMainnet") {
+  } else if (networkName === "base") {
     gatewayAddress = GATEWAY_BASE_MAINNET;
   } else if (networkName === "etherlink") {
     gatewayAddress = GATEWAY_BASE_MAINNET;  

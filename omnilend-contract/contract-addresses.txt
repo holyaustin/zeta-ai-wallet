@@ -24,8 +24,8 @@ npx hardhat verify --network mainnet DEPLOYED_CONTRACT_ADDRESS "Constructor argu
 npx hardhat verify \
   --network baseMainnet \
   0x636B873B56eE793Cc2707d93d13Ae6e04EA6E769 \
-  0x0c487a766110c85d301d96e33579c5b317fa4995 \
-  0x589C1494089889C077d7AbBA17B40575E961cC8c
+  "0x0c487a766110c85d301d96e33579c5b317fa4995" \
+  "0x589C1494089889C077d7AbBA17B40575E961cC8c"
 
   The contract 0x636B873B56eE793Cc2707d93d13Ae6e04EA6E769 has already been verified on Sourcify.
 https://repo.sourcify.dev/contracts/full_match/8453/0x636B873B56eE793Cc2707d93d13Ae6e04EA6E769/
